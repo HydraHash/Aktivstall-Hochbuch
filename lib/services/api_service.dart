@@ -4,7 +4,7 @@ import '../models/booking.dart';
 
 class ApiService {
   // CHANGE this to your API base URL
-  static const String baseUrl = 'https://app.aktivstall-hochbuch.de';
+  static const String baseUrl = 'http://app.aktivstall-hochbuch.de';
 
   static Future<List<Booking>> fetchBookingsUtc({
     required int objectId,
