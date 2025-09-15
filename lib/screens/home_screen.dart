@@ -1,43 +1,57 @@
-// lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
-import '../config/brand.dart';
+import 'calendar_screen.dart';
+import 'help_screen.dart';
+import '../services/api_service.dart';
+import 'login_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  void _logout() async {
+    await ApiService.logout();
+    if (context.mounted) {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Simple welcome screen with logo centered and subtle background color
-    return Container(
-      color: Brand.accent.withOpacity(0.12), // soft tinted background
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+    return Scaffold(
+      drawer: Drawer(
+        child: ListView(
           children: [
-            // use the logo asset
-            SizedBox(
-              width: 180,
-              height: 180,
-              child: Image.asset(Brand.logoAsset, fit: BoxFit.contain),
+            const DrawerHeader(child: Center(child: Text("Aktivstall Hochbuch"))),
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text("Home"),
+              onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen())),
             ),
-            const SizedBox(height: 24),
-            Text(
-              'Welcome to ${Brand.appName}',
-              style: TextStyle(fontSize: 20, color: Brand.primary, fontWeight: FontWeight.w600),
+            ListTile(
+              leading: const Icon(Icons.calendar_today),
+              title: const Text("Kalender"),
+              onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const CalendarScreen())),
             ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0),
-              child: Text(
-                'Use the calendar to book slots. '
-                'Open the drawer to navigate between screens.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[700]),
-              ),
+            ListTile(
+              leading: const Icon(Icons.help),
+              title: const Text("Hilfe und Feedback"),
+              onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HelpScreen())),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text("Logout"),
+              onTap: _logout,
             ),
           ],
         ),
       ),
+      appBar: AppBar(title: const Text("Home")),
+      body: const Center(child: Text("Herzlich Willkommen! Wir entwickeln diese App ständig weiter, Ihr Feedback hilft uns dabei. Nutzen Sie bitte bei technischen Problemen oder Anregungen den Hilfebereich im Menü.")),
     );
   }
 }
