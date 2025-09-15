@@ -18,7 +18,7 @@ class _HelpScreenState extends State<HelpScreen> {
   Future<void> _sendFeedback() async {
     final text = _controller.text.trim();
     if (text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a message')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bitte beschreiben Sie das Problem oder Feedback genauer.')));
       return;
     }
     setState(() => _sending = true);
@@ -35,7 +35,7 @@ class _HelpScreenState extends State<HelpScreen> {
       );
 
       if (res.statusCode == 200 || res.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feedback sent — thank you!')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feedback erfolgreich gesendet — Vielen Dank!')));
         _controller.clear();
       } else {
         // fallback: show success locally (if backend not present)
@@ -43,7 +43,7 @@ class _HelpScreenState extends State<HelpScreen> {
       }
     } catch (e) {
       // If backend not available, still provide local feedback
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to send feedback — try later')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feedback konnte nicht gesendet werden - bitte senden Sie uns eine Mail.')));
     } finally {
       setState(() => _sending = false);
     }
@@ -57,22 +57,18 @@ class _HelpScreenState extends State<HelpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Help & Feedback')),
+      appBar: AppBar(title: const Text('Hilfe & Feedback')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Text(
-              'Report a technical issue or send feedback.',
-              style: TextStyle(color: Brand.primary, fontWeight: FontWeight.w600),
-            ),
             const SizedBox(height: 12),
             TextField(
               controller: _controller,
               maxLines: 6,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
-                hintText: 'Describe the issue or feedback...',
+                hintText: 'Bitte beschreiben Sie das Problem oder Feedback genauer.',
               ),
             ),
             const SizedBox(height: 12),
@@ -82,7 +78,7 @@ class _HelpScreenState extends State<HelpScreen> {
                   child: ElevatedButton.icon(
                     onPressed: _sending ? null : _sendFeedback,
                     icon: _sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.send),
-                    label: const Text('Send'),
+                    label: const Text('Senden'),
                   ),
                 ),
               ],
