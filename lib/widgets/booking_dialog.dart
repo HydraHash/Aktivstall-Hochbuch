@@ -44,7 +44,7 @@ class _BookingDialogState extends State<BookingDialog> {
               DropdownButton<int>(
                 value: _durationMinutes,
                 items: List.generate((240/15).round(), (i) => (i+1)*15)
-                  .map((m)=> DropdownMenuItem(value: m, child: Text('${m} min')))
+                  .map((m)=> DropdownMenuItem(value: m, child: Text('$m min')))
                   .toList(),
                 onChanged: (v) => setState(()=> _durationMinutes = v!),
               )

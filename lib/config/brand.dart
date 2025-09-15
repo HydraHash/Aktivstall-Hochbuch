@@ -30,7 +30,9 @@ class Brand {
     final swatch = <int, Color>{};
     final r = color.red, g = color.green, b = color.blue;
 
-    for (int i = 1; i < 10; i++) strengths.add(0.1 * i);
+    for (int i = 1; i < 10; i++) {
+      strengths.add(0.1 * i);
+    }
     for (final s in strengths) {
       final ds = 0.5 - s;
       swatch[(s * 1000).round()] = Color.fromRGBO(
