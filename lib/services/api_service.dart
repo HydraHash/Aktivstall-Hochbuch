@@ -55,6 +55,19 @@ class ApiService {
     }
   }
 
+  static Future<bool> postFeedback({required String os, required String message}) async {
+    final uri = Uri.parse('$baseUrl/feedback');
+    final token = await getToken();
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+    };
+    if (token != null && token.isNotEmpty) headers['Authorization'] = token;
+
+    final body = jsonEncode({'os': os, 'message': message});
+    final res = await http.post(uri, headers: headers, body: body);
+    return res.statusCode == 200 || res.statusCode == 201;
+  }
+
   static Future<String> login(String email, String password) async {
     final uri = Uri.parse("$baseUrl/auth/login");
     final res = await http.post(uri,

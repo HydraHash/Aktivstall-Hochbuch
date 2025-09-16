@@ -1,7 +1,5 @@
-// lib/screens/help_screen.dart
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import '../services/storage_service.dart';
+import '../services/api_service.dart';
 import '../config/brand.dart';
 
 class HelpScreen extends StatefulWidget {
@@ -13,45 +11,31 @@ class HelpScreen extends StatefulWidget {
 
 class _HelpScreenState extends State<HelpScreen> {
   final _controller = TextEditingController();
+  String? _selectedOs;
   bool _sending = false;
 
   Future<void> _sendFeedback() async {
     final text = _controller.text.trim();
+    final os = _selectedOs ?? 'Other';
     if (text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bitte beschreiben Sie das Problem oder Feedback genauer.')));
       return;
     }
     setState(() => _sending = true);
-
-    final token = await StorageService.readToken();
-    final uri = Uri.parse('${_apiBase()}/feedback'); // backend endpoint (if exists)
     try {
-      final res = await http.post(uri,
-        headers: {
-          if (token != null) 'Authorization': token,
-          'Content-Type': 'application/json'
-        },
-        body: '{"message": ${Uri.encodeComponent(text)}}',
-      );
-
-      if (res.statusCode == 200 || res.statusCode == 201) {
+      final ok = await ApiService.postFeedback(os: os, message: text);
+      if (ok) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feedback erfolgreich gesendet — Vielen Dank!')));
         _controller.clear();
+        setState(() => _selectedOs = null);
       } else {
-        // fallback: show success locally (if backend not present)
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Server response: ${res.statusCode}')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fehler beim Senden, bitte versuchen Sie es später erneut.')));
       }
     } catch (e) {
-      // If backend not available, still provide local feedback
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feedback konnte nicht gesendet werden - bitte senden Sie uns eine Mail.')));
     } finally {
       setState(() => _sending = false);
     }
-  }
-
-  String _apiBase(){
-    // copy the same base url used in ApiService
-    return 'https://app.aktivstall-hochbuch.de';
   }
 
   @override
@@ -62,6 +46,22 @@ class _HelpScreenState extends State<HelpScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            Text(
+              'Melden Sie ein technisches Problem oder senden Sie uns Feedback. Alternativ können Sie uns auch eine E-Mail unter technik@aktivstall-hochbuch.de zukommen lassen.',
+              style: TextStyle(color: Brand.primary, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _selectedOs,
+              decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Betriebssystem'),
+              items: const [
+                DropdownMenuItem(value: 'Android', child: Text('Android')),
+                DropdownMenuItem(value: 'iOS', child: Text('iOS')),
+                DropdownMenuItem(value: 'Other', child: Text('Other')),
+              ],
+              onChanged: (v) => setState(() => _selectedOs = v),
+              validator: (v) => v == null ? 'Bitte wählen' : null,
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: _controller,
