@@ -27,7 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SafeArea(
           child: ListView(
             children: [
-              DrawerHeader(child: Center(child: Text(Brand.appName, style: Theme.of(context).textTheme.titleLarge))),
+              DrawerHeader(child: Center(child: Image.asset('assets/icon.png'))),
               ListTile(leading: const Icon(Icons.home), title: const Text("Home"), onTap: () => Navigator.pop(context)),
               ListTile(leading: const Icon(Icons.calendar_today), title: const Text("Kalender"), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CalendarScreen()))),
               ListTile(leading: const Icon(Icons.help), title: const Text("Hilfe und Feedback"), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpScreen()))),
