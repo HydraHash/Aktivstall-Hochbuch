@@ -41,28 +41,34 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Home'),
         backgroundColor: Brand.primary,
       ),
-      body: Column(
-        children: [
-          const SizedBox(height: 40),
-          const BrandHeader(title: "", showSubtitle: false, logoHeight: 120),
-          // Body content
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
-              child: Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // use the same header, now title shown optionally (pass app name)
+            const BrandHeader(title: "", showSubtitle: false),
+            const SizedBox(height: 12),
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 760, minWidth: 300),
                 child: Padding(
-                  padding: const EdgeInsets.all(18.0),
-                  child: Text(
-                    'Willkommen bei Aktivstall Hochbuch. Hier können Sie die Belegungen einsehen und Plätze buchen. Bei Fragen nutzen Sie bitte den Hilfebereich.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(18.0),
+                      child: Text(
+                        'Willkommen in der App des Aktivstall Hochbuch. Hier können Sie die Hallenbelegungen einsehen und Plätze buchen.\nWir entwickeln die App ständig weiter, dabei sind wir auch auf Ihr Feedback angewiesen. Bei Fragen oder Feedback nutzen Sie bitte den Hilfebereich.',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 16),
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 40),
+          ],
+        ),
       ),
     );
   }

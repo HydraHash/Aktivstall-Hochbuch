@@ -37,9 +37,10 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            const SizedBox(height: 40),
-            const BrandHeader(title: "", showSubtitle: false, logoHeight: 120),
+            // responsive header (no extra sizedbox)
+            const BrandHeader(title: "", showSubtitle: false),
             const SizedBox(height: 12),
+            // center the card and keep it sized to content
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Card(
