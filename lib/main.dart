@@ -3,9 +3,15 @@ import 'package:google_fonts/google_fonts.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'config/brand.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // initialize German locale (and primary fallback)
+  await initializeDateFormatting('de_DE', null);
+  Intl.defaultLocale = 'de_DE';
   runApp(const MyApp());
 }
 
