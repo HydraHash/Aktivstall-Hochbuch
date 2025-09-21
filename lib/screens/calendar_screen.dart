@@ -41,11 +41,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
     setState(() => _loading = true);
     final map = isoWeekYear(anyDateInWeek);
     final year = map['year']!;
-    final week = map['week']!;
+    var week = map['week']!;
     try {
-      final list = await ApiService.getBookingsForWeek(year: year, week: week, objectId: 1);
+      final currentWeek = await ApiService.getBookingsForWeek(year: year, week: week, objectId: 1);
+      final nextWeek = await ApiService.getBookingsForWeek(year: year, week: week + 1, objectId: 1);
+      final List<Booking> allBookings = [];
+      allBookings.addAll(currentWeek);
+      allBookings.addAll(nextWeek);
       final Map<DateTime, List<Booking>> ev = {};
-      for (final b in list) {
+      for (final b in allBookings) {
         final localStart = b.start.toLocal();
         final key = _dateOnly(localStart);
         ev.putIfAbsent(key, () => []).add(b);
@@ -145,20 +149,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   // Main flow to create booking using numeric time inputs and auto-end = +1h
   Future<void> _createBookingFlow() async {
+    // step 1: pick date
+    final firstDate = DateTime.now();
+    final initialDate = _focusedDay.isBefore(firstDate) ? firstDate : _focusedDay;
+
     final pickedDate = await showDatePicker(
       context: context,
-      initialDate: _focusedDay,
-      firstDate: DateTime.now(),
+      initialDate: initialDate,
+      firstDate: firstDate,
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (pickedDate == null) return;
 
-    // default start: next full quarter hour (rounded up)
+    // step 2: default start (next quarter-hour)
     final now = DateTime.now();
-    final defaultStart = DateTime(pickedDate.year, pickedDate.month, pickedDate.day,
-        now.hour, ( (now.minute + 14) ~/ 15) * 15).add(const Duration(minutes: 0));
+    final nextQuarter = ((now.minute + 14) ~/ 15) * 15;
+    final defaultStart = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, now.hour, nextQuarter);
     final defaultStartTime = TimeOfDay(hour: defaultStart.hour, minute: defaultStart.minute);
 
+    // pick start time (numeric dialog)
     final startTOD = await _showNumericTimePicker(
       context: context,
       title: 'Startzeit wählen (24h)',
@@ -168,6 +177,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     final startLocal = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, startTOD.hour, startTOD.minute);
 
+    // default end = start + 1 hour
     final endDefault = startLocal.add(const Duration(hours: 1));
     final endTOD = await _showNumericTimePicker(
       context: context,
@@ -178,19 +188,76 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     final endLocal = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, endTOD.hour, endTOD.minute);
 
+    // validate chronological order
     if (!endLocal.isAfter(startLocal)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('End must be after start')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('End must be after start')));
       return;
     }
 
+    // validate duration
     final durationMin = endLocal.difference(startLocal).inMinutes;
     if (durationMin < 15 || durationMin > 240) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Duration must be 15–240 minutes')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Duration must be 15–240 minutes')));
       return;
     }
 
-    // Confirmation dialog (bullet list)
-    final fmtDate = DateFormat('EEEE, dd.MM.yyyy', 'de_DE'); // Monday spelled in German if locale used
+    // step 3: collect metadata (rider, horse, usage, details, exclusive)
+    String details = '';
+    String nameRider = '';
+    String nameHorse = '';
+    String descUsage = '';
+    bool exclusive = false;
+
+    final gotMeta = await showDialog<bool>(
+      context: context,
+      builder: (c) {
+        final detailsCtrl = TextEditingController();
+        final riderCtrl = TextEditingController();
+        final horseCtrl = TextEditingController();
+        final usageCtrl = TextEditingController();
+        return StatefulBuilder(builder: (ctx, setStateDialog) {
+          return AlertDialog(
+            title: const Text('Weitere Angaben'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: riderCtrl, decoration: const InputDecoration(labelText: 'Name Reiter')),
+                  const SizedBox(height: 8),
+                  TextField(controller: horseCtrl, decoration: const InputDecoration(labelText: 'Name Pferd')),
+                  const SizedBox(height: 8),
+                  TextField(controller: usageCtrl, decoration: const InputDecoration(labelText: 'Kurz: Zweck / Nutzung')),
+                  const SizedBox(height: 8),
+                  TextField(controller: detailsCtrl, decoration: const InputDecoration(labelText: 'Details (optional)'), maxLines: 3),
+                  const SizedBox(height: 12),
+                  CheckboxListTile(
+                    value: exclusive,
+                    onChanged: (v) => setStateDialog(() => exclusive = v ?? false),
+                    title: const Text('Ich benötige die Halle alleine'),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Abbrechen')),
+              ElevatedButton(onPressed: () {
+                details = detailsCtrl.text.trim();
+                nameRider = riderCtrl.text.trim();
+                nameHorse = horseCtrl.text.trim();
+                descUsage = usageCtrl.text.trim();
+                Navigator.pop(c, true);
+              }, child: const Text('Weiter')),
+            ],
+          );
+        });
+      },
+    );
+
+    if (gotMeta != true) return;
+
+    // step 4: confirmation dialog (bullet list)
+    final fmtDate = DateFormat('EEEE, dd.MM.yyyy', 'de_DE');
     final fmtTime = DateFormat('HH:mm');
     final confirmed = await showDialog<bool>(
       context: context,
@@ -206,7 +273,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
             const SizedBox(height: 6),
             _bulletRow('Ende', fmtTime.format(endLocal)),
             const SizedBox(height: 6),
-            _bulletRow('Dauer', '${durationMin} Minuten'),
+            _bulletRow('Dauer', '$durationMin Minuten'),
+            if (nameRider.isNotEmpty) ...[const SizedBox(height: 6), _bulletRow('Reiter', nameRider)],
+            if (nameHorse.isNotEmpty) ...[const SizedBox(height: 6), _bulletRow('Pferd', nameHorse)],
+            if (descUsage.isNotEmpty) ...[const SizedBox(height: 6), _bulletRow('Verwendung', descUsage)],
+            if (details.isNotEmpty) ...[const SizedBox(height: 6), _bulletRow('Details', details)],
+            const SizedBox(height: 6),
+            _bulletRow('Exklusiv', exclusive ? 'Ja' : 'Nein'),
           ],
         ),
         actions: [
@@ -218,27 +291,41 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     if (confirmed != true) return;
 
-    // convert to UTC before sending
+    // step 5: call API
     final startUtc = startLocal.toUtc();
     final endUtc = endLocal.toUtc();
 
     setState(() => _loading = true);
     try {
-      final created = await ApiService.createBooking(objectId: 1, startUtc: startUtc, endUtc: endUtc);
+      final created = await ApiService.createBooking(
+        objectId: 1,
+        startUtc: startUtc,
+        endUtc: endUtc,
+        exclusive: exclusive,
+        details: details,
+        nameRider: nameRider,
+        nameHorse: nameHorse,
+        descUsage: descUsage,
+      );
+
+      // update local events map
       final key = _dateOnly(created.start.toLocal());
       setState(() {
         _events.putIfAbsent(key, () => []).add(created);
       });
-      // refresh the authoritative week
+
+      // refresh authoritative data for week
       await _loadBookingsForWeek(_focusedDay);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Buchung erfolgreich.')));
+
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Buchung erfolgreich.')));
     } catch (e) {
-      // If API returns 409 or message, show it to user
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Buchung nicht erfolgreich: $e')));
+      // Show the server message if available; the exception will contain response body in many cases
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Buchung nicht erfolgreich: $e')));
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
+
 
   Widget _bulletRow(String label, String value) {
     return Row(
@@ -274,17 +361,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
       key: _scaffoldKey,
       appBar: AppBar(
         title: Text('Reithalle Übersicht'),
-        // keep back arrow if present; provide menu as action so users can always open drawer
-        /*actions: [
-          Builder(builder: (ctx) {
-            return IconButton(
-              icon: const Icon(Icons.menu),
-              onPressed: () {
-                Scaffold.of(ctx).openDrawer();
-              },
-            );
-          }),
-        ],*/
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -338,8 +414,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       final end = b.end.toLocal();
                       final fmt = DateFormat('EEE dd.MM HH:mm', 'de_DE'); // 24h
                       return ListTile(
-                        title: Text('${fmt.format(start)} — ${DateFormat('HH:mm').format(end)}'),
-                        subtitle: Text('Booking id: ${b.id}${b.details != null ? ' — ${b.details}' : ''}'),
+                        leading: b.exclusive ? Icon(Icons.lock, color: Colors.redAccent) : const Icon(Icons.event),
+                        title: Text('${DateFormat('EEE dd.MM HH:mm', 'de_DE').format(b.start)} — ${DateFormat('HH:mm').format(b.end)}'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if ((b.nameRider ?? '').isNotEmpty) Text('Reiter: ${b.nameRider}'),
+                            if ((b.nameHorse ?? '').isNotEmpty) Text('Pferd: ${b.nameHorse}'),
+                            if ((b.descUsage ?? '').isNotEmpty) Text('Verwendung: ${b.descUsage}'),
+                            if ((b.details ?? '').isNotEmpty) Text('Details: ${b.details}'),
+                          ],
+                        ),
+                        isThreeLine: true,
                       );
                     }).toList(),
                   ),

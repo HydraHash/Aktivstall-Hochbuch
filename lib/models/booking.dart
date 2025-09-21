@@ -2,9 +2,13 @@ class Booking {
   final int id;
   final int objectId;
   final int userId;
-  final DateTime start; // parsed DateTime (preserves timezone info)
+  final DateTime start;
   final DateTime end;
   final String? details;
+  final String? nameRider;
+  final String? nameHorse;
+  final String? descUsage;
+  final bool exclusive;
 
   Booking({
     required this.id,
@@ -13,12 +17,16 @@ class Booking {
     required this.start,
     required this.end,
     this.details,
+    this.nameRider,
+    this.nameHorse,
+    this.descUsage,
+    this.exclusive = false,
   });
 
   factory Booking.fromJson(Map<String, dynamic> j) {
-    DateTime parseDt(dynamic x) {
-      if (x == null) return DateTime.fromMillisecondsSinceEpoch(0);
-      return DateTime.parse(x as String);
+    DateTime parseDt(dynamic v) {
+      if (v == null) return DateTime.fromMillisecondsSinceEpoch(0);
+      return DateTime.parse(v).toLocal();
     }
 
     return Booking(
@@ -28,6 +36,10 @@ class Booking {
       start: parseDt(j['start_time'] ?? j['startTime']),
       end: parseDt(j['end_time'] ?? j['endTime']),
       details: j['details'] as String?,
+      nameRider: j['name_rider'] as String?,
+      nameHorse: j['name_horse'] as String?,
+      descUsage: j['desc_usage'] as String?,
+      exclusive: (j['exclusive'] is bool) ? j['exclusive'] : (j['exclusive'].toString() == '1'),
     );
   }
 }

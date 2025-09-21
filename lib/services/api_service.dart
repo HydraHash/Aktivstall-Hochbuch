@@ -11,12 +11,8 @@ class ApiService {
     return prefs.getString('token');
   }
 
-  // Get bookings for an ISO week (year, week) for objectId
-  static Future<List<Booking>> getBookingsForWeek({
-    required int year,
-    required int week,
-    required int objectId,
-  }) async {
+  // GET bookings for a given iso year/week and objectId
+  static Future<List<Booking>> getBookingsForWeek({required int year, required int week, required int objectId}) async {
     final token = await getToken();
     final uri = Uri.parse('$baseUrl/bookings?year=$year&week=$week&object_id=$objectId');
     final res = await http.get(uri, headers: token != null ? {'Authorization': token} : {});
@@ -24,31 +20,40 @@ class ApiService {
       final List raw = json.decode(res.body) as List;
       return raw.map<Booking>((e) => Booking.fromJson(e as Map<String, dynamic>)).toList();
     } else {
-      throw Exception('Failed to load bookings: ${res.statusCode} ${res.body}');
+      throw Exception('Failed to load bookings (${res.statusCode}): ${res.body}');
     }
   }
 
-  // Create booking: startUtc and endUtc must be DateTime in UTC (use .toUtc())
+  // POST create booking
   static Future<Booking> createBooking({
     required int objectId,
     required DateTime startUtc,
     required DateTime endUtc,
+    bool exclusive = false,
+    String? details,
+    String? nameRider,
+    String? nameHorse,
+    String? descUsage,
   }) async {
     final token = await getToken();
     if (token == null) throw Exception('No auth token');
-
     final payload = {
       'object_id': objectId,
-      'start_time': startUtc.toIso8601String(), // includes Z
+      'start_time': startUtc.toIso8601String(),
       'end_time': endUtc.toIso8601String(),
+      'exclusive': exclusive ? 1 : 0,
+      'details': details ?? '',
+      'name_rider': nameRider ?? '',
+      'name_horse': nameHorse ?? '',
+      'desc_usage': descUsage ?? '',
     };
     final uri = Uri.parse('$baseUrl/bookings');
-    final res = await http.post(uri,
+    final res = await http.post(uri, 
         headers: {'Content-Type': 'application/json', 'Authorization': token},
         body: json.encode(payload));
-
-    if (res.statusCode == 201 || res.statusCode == 200) {
+    if (res.statusCode == 200 || res.statusCode == 201) {
       final j = json.decode(res.body);
+      // if API returns created booking object (it does), convert to Booking
       return Booking.fromJson(j as Map<String, dynamic>);
     } else {
       throw Exception('Create booking failed: ${res.statusCode} ${res.body}');
