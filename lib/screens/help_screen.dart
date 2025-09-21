@@ -57,7 +57,7 @@ class _HelpScreenState extends State<HelpScreen> {
               items: const [
                 DropdownMenuItem(value: 'Android', child: Text('Android')),
                 DropdownMenuItem(value: 'iOS', child: Text('iOS')),
-                DropdownMenuItem(value: 'Other', child: Text('Other')),
+                DropdownMenuItem(value: 'Other', child: Text('Andere')),
               ],
               onChanged: (v) => setState(() => _selectedOs = v),
               validator: (v) => v == null ? 'Bitte wählen' : null,

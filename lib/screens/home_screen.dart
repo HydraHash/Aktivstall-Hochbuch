@@ -58,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(18.0),
                       child: Text(
-                        'Willkommen in der App des Aktivstall Hochbuch. Hier können Sie die Hallenbelegungen einsehen und Plätze buchen.\nWir entwickeln die App ständig weiter, dabei sind wir auch auf Ihr Feedback angewiesen. Bei Fragen oder Feedback nutzen Sie bitte den Hilfebereich.',
+                        'Willkommen in der App des Aktivstall Hochbuch. Hier können Sie die Hallenbelegungen einsehen und Plätze buchen.\n\nWir entwickeln die App ständig weiter, dabei sind wir auch auf Ihr Feedback angewiesen. Bei Fragen oder Feedback nutzen Sie bitte den Hilfebereich.',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 16),
                       ),
                     ),
