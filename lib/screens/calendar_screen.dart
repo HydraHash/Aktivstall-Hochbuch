@@ -60,7 +60,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       });
     } catch (e) {
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading bookings: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler - Buchungen konnten nicht geladen werden. Bitte melden Sie sich erneut an!')));
     }
   }
 
@@ -102,11 +102,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 child: TextFormField(
                   controller: hourCtrl,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Hours (24h)'),
+                  decoration: const InputDecoration(labelText: 'Stunden'),
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Required';
+                    if (v == null || v.isEmpty) return 'Notwendig';
                     final i = int.tryParse(v);
-                    if (i == null || i < 0 || i > 23) return 'Invalid';
+                    if (i == null || i < 0 || i > 23) return 'Ungültig';
                     return null;
                   },
                 ),
@@ -116,11 +116,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 child: TextFormField(
                   controller: minCtrl,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Minutes'),
+                  decoration: const InputDecoration(labelText: 'Minuten'),
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Required';
+                    if (v == null || v.isEmpty) return 'Notwendig';
                     final i = int.tryParse(v);
-                    if (i == null || i < 0 || i > 59) return 'Invalid';
+                    if (i == null || i < 0 || i > 59) return 'Ungültig';
                     return null;
                   },
                 ),
@@ -129,7 +129,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Abbrechen')),
           ElevatedButton(
             onPressed: () {
               if (formKey.currentState?.validate() ?? false) {
@@ -170,7 +170,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     // pick start time (numeric dialog)
     final startTOD = await _showNumericTimePicker(
       context: context,
-      title: 'Startzeit wählen (24h)',
+      title: 'Startzeit wählen:',
       initial: defaultStartTime,
     );
     if (startTOD == null) return;
@@ -181,7 +181,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final endDefault = startLocal.add(const Duration(hours: 1));
     final endTOD = await _showNumericTimePicker(
       context: context,
-      title: 'Endzeit wählen (24h)',
+      title: 'Endzeit wählen:',
       initial: TimeOfDay(hour: endDefault.hour, minute: endDefault.minute),
     );
     if (endTOD == null) return;
@@ -190,14 +190,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     // validate chronological order
     if (!endLocal.isAfter(startLocal)) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('End must be after start')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Endzeit muss 15 Minuten nach Startzeit sein!')));
       return;
     }
 
     // validate duration
     final durationMin = endLocal.difference(startLocal).inMinutes;
     if (durationMin < 15 || durationMin > 240) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Duration must be 15–240 minutes')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dauer muss zwischen 15 und 240 Minuten liegen!')));
       return;
     }
 
@@ -269,9 +269,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
           children: [
             _bulletRow('Datum', fmtDate.format(startLocal)),
             const SizedBox(height: 6),
-            _bulletRow('Start', fmtTime.format(startLocal)),
+            _bulletRow('Startzeitpunkt', fmtTime.format(startLocal)),
             const SizedBox(height: 6),
-            _bulletRow('Ende', fmtTime.format(endLocal)),
+            _bulletRow('Endzeitpunkt', fmtTime.format(endLocal)),
             const SizedBox(height: 6),
             _bulletRow('Dauer', '$durationMin Minuten'),
             if (nameRider.isNotEmpty) ...[const SizedBox(height: 6), _bulletRow('Reiter', nameRider)],
