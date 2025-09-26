@@ -55,7 +55,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ev.putIfAbsent(key, () => []).add(b);
       }
       setState(() {
-        _events = ev;
+        // merge server events into existing events map (preserve locally added entries)
+        final merged = Map<DateTime, List<Booking>>.from(_events);
+        ev.forEach((key, list) {
+          // if both exist, merge lists and deduplicate by id
+          if (merged.containsKey(key)) {
+            final existing = merged[key]!;
+            // add new ones that aren't already present
+            for (final b in list) {
+              if (!existing.any((e) => e.id == b.id)) existing.add(b);
+            }
+          } else {
+            merged[key] = List<Booking>.from(list);
+          }
+        });
+        _events = merged;
         _loading = false;
       });
     } catch (e) {
