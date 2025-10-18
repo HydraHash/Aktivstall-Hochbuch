@@ -3,6 +3,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../models/booking.dart';
+import 'login_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -74,7 +75,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
       });
     } catch (e) {
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler - Buchungen konnten nicht geladen werden. Bitte melden Sie sich erneut an!')));
+      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (context) => const LoginScreen()), 
+      (Route<dynamic> route) => false,
+      );
+      //ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler - Buchungen konnten nicht geladen werden. Bitte melden Sie sich erneut an!')));
     }
   }
 
