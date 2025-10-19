@@ -6,6 +6,7 @@ import 'services/auth_service.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'config/brand.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,9 +34,23 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Brand.primary),
         primaryColor: Brand.primary,
         scaffoldBackgroundColor: Colors.white,
-        textTheme: Brand.textTheme(GoogleFonts.interTextTheme(base.textTheme)), // or remove GoogleFonts
+        textTheme: Brand.textTheme(GoogleFonts.interTextTheme(base.textTheme)),
         useMaterial3: true,
       ),
+
+      // 2. ADD THESE LINES TO CONFIGURE LOCALIZATION
+      locale: const Locale('de', 'DE'), // Set the default locale
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('de', 'DE'), // German
+        Locale('en', 'US'), // English (as a fallback)
+      ],
+      // --- END OF FIX ---
+
       home: FutureBuilder<Widget>(
         future: _decideStartPage(),
         builder: (context, snapshot) {

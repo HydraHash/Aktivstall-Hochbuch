@@ -173,9 +173,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     final pickedDate = await showDatePicker(
       context: context,
+      locale: const Locale('de', 'DE'),
       initialDate: initialDate,
       firstDate: firstDate,
       lastDate: DateTime.now().add(const Duration(days: 365)),
+      helpText: 'Datum auswählen',
+      confirmText: 'Weiter',
+      cancelText: 'Abbrechen',
     );
     if (pickedDate == null) return;
 
