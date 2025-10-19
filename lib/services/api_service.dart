@@ -104,6 +104,30 @@ class ApiService {
     }
   }
 
+  // GET all bookings for current user
+  static Future<List<Booking>> getMyBookings() async {
+    final token = await getToken();
+    if (token == null) throw Exception('No auth token');
+    final uri = Uri.parse('$baseUrl/bookings/my');
+    final res = await http.get(uri, headers: {'Authorization': token});
+    if (res.statusCode == 200) {
+      final List raw = json.decode(res.body) as List;
+      return raw.map<Booking>((e) => Booking.fromJson(e as Map<String, dynamic>)).toList();
+    } else {
+      throw Exception('Failed to load bookings (${res.statusCode}): ${res.body}');
+    }
+  }
+
+  // DELETE a booking by ID
+  static Future<bool> deleteBooking(int id) async {
+    final token = await getToken();
+    if (token == null) throw Exception('No auth token');
+    final uri = Uri.parse('$baseUrl/bookings/delete/$id');
+    final res = await http.delete(uri, headers: {'Authorization': token});
+    return res.statusCode == 200 || res.statusCode == 204;
+  }
+
+
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove("token");

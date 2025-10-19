@@ -1,3 +1,4 @@
+import 'package:aktivstall_app/screens/bookings_screen.dart';
 import 'package:flutter/material.dart';
 import 'calendar_screen.dart';
 import 'help_screen.dart';
@@ -29,7 +30,8 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               DrawerHeader(child: Center(child: Image.asset('assets/icon.png'))),
               ListTile(leading: const Icon(Icons.home), title: const Text("Home"), onTap: () => Navigator.pop(context)),
-              ListTile(leading: const Icon(Icons.calendar_today), title: const Text("Kalender"), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CalendarScreen()))),
+              ListTile(leading: const Icon(Icons.calendar_today), title: const Text("Belegungsplan"), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CalendarScreen()))),
+              ListTile(leading: const Icon(Icons.list_alt), title: const Text("Meine Buchungen"), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyBookingsScreen()))),
               ListTile(leading: const Icon(Icons.help), title: const Text("Hilfe und Feedback"), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpScreen()))),
               const Divider(),
               ListTile(leading: const Icon(Icons.logout), title: const Text("Logout"), onTap: _logout),
