@@ -78,25 +78,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
       Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (context) => const LoginScreen()), 
       (Route<dynamic> route) => false,
       );
-      //ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler - Buchungen konnten nicht geladen werden. Bitte melden Sie sich erneut an!')));
     }
   }
 
   List<Booking> _getEventsForDay(DateTime day) => _events[_dateOnly(day)] ?? [];
 
-  void _prevWeek() {
-    setState(() {
-      _focusedDay = _focusedDay.subtract(const Duration(days: 14)); // jump 2 weeks
-    });
-    _loadBookingsForWeek(_focusedDay);
-  }
-
-  void _nextWeek() {
-    setState(() {
-      _focusedDay = _focusedDay.add(const Duration(days: 14));
-    });
-    _loadBookingsForWeek(_focusedDay);
-  }
 
   // Numeric time picker dialog: returns TimeOfDay or null
   Future<TimeOfDay?> _showNumericTimePicker({
@@ -374,11 +360,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final iso = isoWeekYear(_focusedDay);
-    final week = iso['week']!;
-    final year = iso['year']!;
-    //final weekText = 'Woche $week / $year';
-
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
@@ -432,9 +413,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 Expanded(
                   child: ListView(
                     children: _getEventsForDay(_focusedDay).map((b) {
-                      final start = b.start.toLocal();
-                      final end = b.end.toLocal();
-                      final fmt = DateFormat('EEE dd.MM HH:mm', 'de_DE'); // 24h
                       return ListTile(
                         leading: b.exclusive ? Icon(Icons.lock, color: Colors.redAccent) : const Icon(Icons.event),
                         title: Text('${DateFormat('EEE dd.MM HH:mm', 'de_DE').format(b.start)} — ${DateFormat('HH:mm').format(b.end)}'),
