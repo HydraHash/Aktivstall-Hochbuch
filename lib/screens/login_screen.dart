@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
+import 'password_reset_screen.dart';
 import '../widgets/brand_header.dart';
 import '../config/brand.dart';
 
@@ -64,7 +65,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 8),
                       TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => 
-                      const RegisterScreen())), child: const Text("Registrieren", style: TextStyle(color: Colors.black87),))
+                      const RegisterScreen())), child: const Text("Registrieren", style: TextStyle(color: Colors.black87),)),
+                      const SizedBox(height: 8),
+                      TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => 
+                      const PasswordResetScreen())), child: const Text("Passwort vergessen", style: TextStyle(color: Colors.black87),))
                     ],
                   ),
                 ),

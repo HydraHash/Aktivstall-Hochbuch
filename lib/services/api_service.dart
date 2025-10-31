@@ -89,6 +89,31 @@ class ApiService {
     }
   }
 
+  static Future<void> requestPasswordReset(String email) async {
+    final uri = Uri.parse("$baseUrl/auth/check");
+    
+    final res = await http.post(uri,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"email": email}));
+
+    if (res.statusCode == 200) {
+      return;
+    } else {
+      throw Exception("Diese E-Mail kann keinem Benutzer zugeordnet werden.");
+    }
+  }
+
+  static Future<void> confirmPasswordReset(String email, String newPassword) async {
+    final uri = Uri.parse("$baseUrl/auth/reset");
+    final res = await http.post(uri,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"email": email, "password": newPassword}));
+
+    if (res.statusCode != 200) {
+      throw Exception("E-Mail oder Passwort ungültig.");
+    }
+  }
+
   static Future<void> register(String email, String password, String code) async {
     final uri = Uri.parse("$baseUrl/auth/register");
     final res = await http.post(uri,
