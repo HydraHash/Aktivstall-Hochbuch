@@ -45,10 +45,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     var week = map['week']!;
     try {
       final currentWeek = await ApiService.getBookingsForWeek(year: year, week: week, objectId: 1);
-      final nextWeek = await ApiService.getBookingsForWeek(year: year, week: week + 1, objectId: 1);
       final List<Booking> allBookings = [];
       allBookings.addAll(currentWeek);
-      allBookings.addAll(nextWeek);
       final Map<DateTime, List<Booking>> ev = {};
       for (final b in allBookings) {
         final localStart = b.start.toLocal();
