@@ -131,7 +131,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Abbrechen')),
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Zurück')),
           ElevatedButton(
             onPressed: () {
               if (formKey.currentState?.validate() ?? false) {
@@ -151,186 +151,262 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   // Main flow to create booking using numeric time inputs and auto-end = +1h
   Future<void> _createBookingFlow() async {
-    // step 1: pick date
-    final firstDate = DateTime.now();
-    final initialDate = _focusedDay.isBefore(firstDate) ? firstDate : _focusedDay;
+  DateTime? pickedDate;
+  TimeOfDay? startTOD;
+  TimeOfDay? endTOD;
 
-    final pickedDate = await showDatePicker(
-      context: context,
-      locale: const Locale('de', 'DE'),
-      initialDate: initialDate,
-      firstDate: firstDate,
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      helpText: 'Datum auswählen',
-      confirmText: 'Weiter',
-      cancelText: 'Abbrechen',
-    );
-    if (pickedDate == null) return;
+  final riderCtrl = TextEditingController();
+  final horseCtrl = TextEditingController();
+  final usageCtrl = TextEditingController();
+  final detailsCtrl = TextEditingController();
+  bool exclusive = false;
 
-    // step 2: default start (next quarter-hour)
-    final now = DateTime.now();
-    final nextQuarter = ((now.minute + 14) ~/ 15) * 15;
-    final defaultStart = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, now.hour, nextQuarter);
-    final defaultStartTime = TimeOfDay(hour: defaultStart.hour, minute: defaultStart.minute);
+  int currentStep = 0;
+  bool isFlowActive = true;
 
-    // pick start time (numeric dialog)
-    final startTOD = await _showNumericTimePicker(
-      context: context,
-      title: 'Startzeit wählen:',
-      initial: defaultStartTime,
-    );
-    if (startTOD == null) return;
+  while (isFlowActive) {
+    switch (currentStep) {
+      
+      // STEP 1: DATE PICKER
+      case 0:
+        final firstDate = DateTime.now();
+        final initialDate = pickedDate ?? (_focusedDay.isBefore(firstDate) ? firstDate : _focusedDay);
 
-    final startLocal = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, startTOD.hour, startTOD.minute);
+        final newDate = await showDatePicker(
+          context: context,
+          locale: const Locale('de', 'DE'),
+          initialDate: initialDate,
+          firstDate: firstDate,
+          lastDate: DateTime.now().add(const Duration(days: 365)),
+          helpText: 'Datum auswählen',
+          confirmText: 'Weiter',
+          cancelText: 'Abbrechen',
+        );
 
-    // default end = start + 1 hour
-    final endDefault = startLocal.add(const Duration(hours: 1));
-    final endTOD = await _showNumericTimePicker(
-      context: context,
-      title: 'Endzeit wählen:',
-      initial: TimeOfDay(hour: endDefault.hour, minute: endDefault.minute),
-    );
-    if (endTOD == null) return;
+        if (newDate == null) {
+          isFlowActive = false; 
+        } else {
+          pickedDate = newDate;
+          currentStep++;
+        }
+        break;
 
-    final endLocal = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, endTOD.hour, endTOD.minute);
+      // STEP 2: START TIME
+      case 1:
+        // Calculate default only if not already set (or reset based on date logic if needed)
+        final now = DateTime.now();
+        int nextQuarter = ((now.minute + 14) ~/ 15) * 15;
+        if (nextQuarter == 60) nextQuarter = 00;
+        
+        // If we have a previous selection, use it, otherwise default
+        final initial = startTOD ?? TimeOfDay(hour: now.hour, minute: nextQuarter);
 
-    // validate chronological order
-    if (!endLocal.isAfter(startLocal)) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Endzeit muss 15 Minuten nach Startzeit sein!')));
-      return;
-    }
+        final newStart = await _showNumericTimePicker(
+          context: context,
+          title: 'Startzeit wählen:',
+          initial: initial,
+        );
 
-    // validate duration
-    final durationMin = endLocal.difference(startLocal).inMinutes;
-    if (durationMin < 15 || durationMin > 240) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dauer muss zwischen 15 und 240 Minuten liegen!')));
-      return;
-    }
+        if (newStart == null) {
+          currentStep--;
+        } else {
+          startTOD = newStart;
+          currentStep++;
+        }
+        break;
 
-    // step 3: collect metadata (rider, horse, usage, details, exclusive)
-    String details = '';
-    String nameRider = '';
-    String nameHorse = '';
-    String descUsage = '';
-    bool exclusive = false;
+      // STEP 3: END TIME
+      case 2:
+        if (pickedDate == null || startTOD == null) {
+          currentStep--; 
+          break; 
+        }
+        
+        final startLocal = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, startTOD.hour, startTOD.minute);
+        
+        final defaultEnd = startLocal.add(const Duration(hours: 1));
+        final initialEnd = endTOD ?? TimeOfDay(hour: defaultEnd.hour, minute: defaultEnd.minute);
 
-    final gotMeta = await showDialog<bool>(
-      context: context,
-      builder: (c) {
-        final detailsCtrl = TextEditingController();
-        final riderCtrl = TextEditingController();
-        final horseCtrl = TextEditingController();
-        final usageCtrl = TextEditingController();
-        return StatefulBuilder(builder: (ctx, setStateDialog) {
-          return AlertDialog(
-            title: const Text('Weitere Angaben'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(controller: riderCtrl, decoration: const InputDecoration(labelText: 'Name Reiter')),
-                  const SizedBox(height: 8),
-                  TextField(controller: horseCtrl, decoration: const InputDecoration(labelText: 'Name Pferd')),
-                  const SizedBox(height: 8),
-                  TextField(controller: usageCtrl, decoration: const InputDecoration(labelText: 'Kurz: Zweck / Nutzung')),
-                  const SizedBox(height: 8),
-                  TextField(controller: detailsCtrl, decoration: const InputDecoration(labelText: 'Details (optional)'), maxLines: 3),
-                  const SizedBox(height: 12),
-                  CheckboxListTile(
-                    value: exclusive,
-                    onChanged: (v) => setStateDialog(() => exclusive = v ?? false),
-                    title: const Text('Ich benötige die Halle alleine'),
-                    controlAffinity: ListTileControlAffinity.leading,
+        final newEnd = await _showNumericTimePicker(
+          context: context,
+          title: 'Endzeit wählen:',
+          initial: initialEnd,
+        );
+
+        if (newEnd == null) {
+          currentStep--;
+          break;
+        }
+
+        // --- VALIDATION LOGIC ---
+        final endLocal = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, newEnd.hour, newEnd.minute);
+
+        if (!endLocal.isAfter(startLocal)) {
+          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Endzeit muss nach Startzeit sein!')));
+          break; 
+        }
+
+        final durationMin = endLocal.difference(startLocal).inMinutes;
+        if (durationMin < 15 || durationMin > 240) {
+          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dauer muss 15-240 Min sein!')));
+          break; 
+        }
+
+        endTOD = newEnd;
+        currentStep++;
+        break;
+
+      // STEP 4: METADATA
+      case 3:
+        final result = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false, // Force user to use buttons
+          builder: (c) {
+            return StatefulBuilder(builder: (ctx, setStateDialog) {
+              return AlertDialog(
+                title: const Text('Weitere Angaben'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Controllers are defined at top, so text persists!
+                      TextField(controller: riderCtrl, decoration: const InputDecoration(labelText: 'Name Reiter')),
+                      const SizedBox(height: 8),
+                      TextField(controller: horseCtrl, decoration: const InputDecoration(labelText: 'Name Pferd')),
+                      const SizedBox(height: 8),
+                      TextField(controller: usageCtrl, decoration: const InputDecoration(labelText: 'Kurz: Zweck / Nutzung')),
+                      const SizedBox(height: 8),
+                      TextField(controller: detailsCtrl, decoration: const InputDecoration(labelText: 'Details (optional)'), maxLines: 3),
+                      const SizedBox(height: 12),
+                      CheckboxListTile(
+                        value: exclusive,
+                        onChanged: (v) => setStateDialog(() => exclusive = v ?? false),
+                        title: const Text('Ich benötige die Halle alleine'),
+                        controlAffinity: ListTileControlAffinity.leading,
+                      ),
+                    ],
+                  ),
+                ),
+                actions: [
+                  // BUTTON: BACK
+                  TextButton(
+                    onPressed: () => Navigator.pop(c, false), // Return false for Back
+                    child: const Text('Zurück'),
+                  ),
+                  // BUTTON: NEXT
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(c, true), // Return true for Next
+                    child: const Text('Weiter'),
                   ),
                 ],
-              ),
+              );
+            });
+          },
+        );
+
+        if (result == true) {
+          currentStep++;
+        } else {
+          currentStep--;
+        }
+        break;
+
+      // STEP 5: CONFIRMATION
+      case 4:
+        final startLocal = DateTime(pickedDate!.year, pickedDate.month, pickedDate.day, startTOD!.hour, startTOD.minute);
+        final endLocal = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, endTOD!.hour, endTOD.minute);
+        final durationMin = endLocal.difference(startLocal).inMinutes;
+
+        final fmtDate = DateFormat('EEEE, dd.MM.yyyy', 'de_DE');
+        final fmtTime = DateFormat('HH:mm');
+
+        final confirmed = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false, 
+          builder: (c) => AlertDialog(
+            title: const Text('Bestätigen'),
+            content: Column(
+               mainAxisSize: MainAxisSize.min,
+               crossAxisAlignment: CrossAxisAlignment.start,
+               children: [
+                 _bulletRow('Datum', fmtDate.format(startLocal)),
+                  const SizedBox(height: 6),
+                  _bulletRow('Startzeitpunkt', fmtTime.format(startLocal)),
+                  const SizedBox(height: 6),
+                  _bulletRow('Endzeitpunkt', fmtTime.format(endLocal)),
+                  const SizedBox(height: 6),
+                  _bulletRow('Dauer', '$durationMin Minuten'),
+                  if (riderCtrl.text != "") ...[const SizedBox(height: 6), _bulletRow('Reiter', riderCtrl.text)],
+                  if (horseCtrl.text != "") ...[const SizedBox(height: 6), _bulletRow('Pferd', horseCtrl.text)],
+                  if (usageCtrl.text != "") ...[const SizedBox(height: 6), _bulletRow('Verwendung', usageCtrl.text)],
+                  if (detailsCtrl.text != "") ...[const SizedBox(height: 6), _bulletRow('Details', detailsCtrl.text)],
+                  const SizedBox(height: 6),
+                  _bulletRow('Exklusiv', exclusive ? 'Ja' : 'Nein'),
+               ],
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Abbrechen')),
-              ElevatedButton(onPressed: () {
-                details = detailsCtrl.text.trim();
-                nameRider = riderCtrl.text.trim();
-                nameHorse = horseCtrl.text.trim();
-                descUsage = usageCtrl.text.trim();
-                Navigator.pop(c, true);
-              }, child: const Text('Weiter')),
+              TextButton(
+                onPressed: () => Navigator.pop(c, false),
+                child: const Text('Zurück'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(c, true),
+                child: const Text('Buchen'),
+              ),
             ],
-          );
-        });
-      },
-    );
+          ),
+        );
 
-    if (gotMeta != true) return;
+        if (confirmed == true) {
+            final startUtc = startLocal.toUtc();
+            final endUtc = endLocal.toUtc();
 
-    // step 4: confirmation dialog (bullet list)
-    final fmtDate = DateFormat('EEEE, dd.MM.yyyy', 'de_DE');
-    final fmtTime = DateFormat('HH:mm');
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Bestätigen'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _bulletRow('Datum', fmtDate.format(startLocal)),
-            const SizedBox(height: 6),
-            _bulletRow('Startzeitpunkt', fmtTime.format(startLocal)),
-            const SizedBox(height: 6),
-            _bulletRow('Endzeitpunkt', fmtTime.format(endLocal)),
-            const SizedBox(height: 6),
-            _bulletRow('Dauer', '$durationMin Minuten'),
-            if (nameRider.isNotEmpty) ...[const SizedBox(height: 6), _bulletRow('Reiter', nameRider)],
-            if (nameHorse.isNotEmpty) ...[const SizedBox(height: 6), _bulletRow('Pferd', nameHorse)],
-            if (descUsage.isNotEmpty) ...[const SizedBox(height: 6), _bulletRow('Verwendung', descUsage)],
-            if (details.isNotEmpty) ...[const SizedBox(height: 6), _bulletRow('Details', details)],
-            const SizedBox(height: 6),
-            _bulletRow('Exklusiv', exclusive ? 'Ja' : 'Nein'),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Abbrechen')),
-          ElevatedButton(onPressed: () => Navigator.pop(c, true), child: const Text('Buchen')),
-        ],
-      ),
-    );
+            setState(() => _loading = true);
+            try {
+              final created = await ApiService.createBooking(
+                objectId: 1,
+                startUtc: startUtc,
+                endUtc: endUtc,
+                exclusive: exclusive,
+                details: detailsCtrl.text,
+                nameRider: riderCtrl.text,
+                nameHorse: horseCtrl.text,
+                descUsage: usageCtrl.text,
+              );
 
-    if (confirmed != true) return;
+              // update local events map
+              final key = _dateOnly(created.start.toLocal());
+              setState(() {
+                _events.putIfAbsent(key, () => []).add(created);
+              });
 
-    // step 5: call API
-    final startUtc = startLocal.toUtc();
-    final endUtc = endLocal.toUtc();
+              // refresh authoritative data for week
+              await _loadBookingsForWeek(_focusedDay);
 
-    setState(() => _loading = true);
-    try {
-      final created = await ApiService.createBooking(
-        objectId: 1,
-        startUtc: startUtc,
-        endUtc: endUtc,
-        exclusive: exclusive,
-        details: details,
-        nameRider: nameRider,
-        nameHorse: nameHorse,
-        descUsage: descUsage,
-      );
-
-      // update local events map
-      final key = _dateOnly(created.start.toLocal());
-      setState(() {
-        _events.putIfAbsent(key, () => []).add(created);
-      });
-
-      // refresh authoritative data for week
-      await _loadBookingsForWeek(_focusedDay);
-
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Buchung erfolgreich.')));
-    } catch (e) {
-      // Show the server message if available; the exception will contain response body in many cases
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Buchung nicht erfolgreich: $e')));
-    } finally {
-      if (mounted) setState(() => _loading = false);
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Buchung erfolgreich.')));
+            } catch (e) {
+              // Show the server message if available; the exception will contain response body in many cases
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Buchung nicht erfolgreich: $e')));
+            } finally {
+              if (mounted) setState(() => _loading = false);
+            }
+           isFlowActive = false; // Break loop
+        } else {
+           currentStep--; // Go back to Metadata
+        }
+        break;
+        
+      default:
+        isFlowActive = false;
     }
   }
+
+  // Dispose controllers after flow is done
+  riderCtrl.dispose();
+  horseCtrl.dispose();
+  usageCtrl.dispose();
+  detailsCtrl.dispose();
+}
 
 
   Widget _bulletRow(String label, String value) {
