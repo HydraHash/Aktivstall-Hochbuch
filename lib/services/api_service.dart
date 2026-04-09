@@ -24,11 +24,11 @@ class ApiService {
     }
   }
 
-  // POST create booking
-  static Future<Booking> createBooking({
+  // POST create single booking
+  static Future<List<Booking>> createBooking({
     required int objectId,
-    required DateTime startUtc,
-    required DateTime endUtc,
+    required List<DateTime> startUtcs,
+    required List<DateTime> endUtcs,
     bool exclusive = false,
     String? details,
     String? nameRider,
@@ -37,29 +37,46 @@ class ApiService {
   }) async {
     final token = await getToken();
     if (token == null) throw Exception('No auth token');
+
+    if (startUtcs.length != endUtcs.length) {
+      throw Exception('Mismatched start and end times');
+    }
+
+    // Added the new array for slots
+    final slots = [];
+    for (int i = 0; i < startUtcs.length; i++) {
+      slots.add({
+        'start_time': startUtcs[i].toIso8601String(),
+        'end_time': endUtcs[i].toIso8601String(),
+      });
+    }
+
     final payload = {
       'object_id': objectId,
-      'start_time': startUtc.toIso8601String(),
-      'end_time': endUtc.toIso8601String(),
+      'slots': slots,
       'exclusive': exclusive ? 1 : 0,
       'details': details ?? '',
       'name_rider': nameRider ?? '',
       'name_horse': nameHorse ?? '',
       'desc_usage': descUsage ?? '',
     };
-    final uri = Uri.parse('$baseUrl/bookings');
+
+    final uri = Uri.parse('$baseUrl/bookings/bulk');
     final res = await http.post(uri, 
         headers: {'Content-Type': 'application/json', 'Authorization': token},
         body: json.encode(payload));
+
     if (res.statusCode == 200 || res.statusCode == 201) {
-      final j = json.decode(res.body);
-      // if API returns created booking object (it does), convert to Booking
-      return Booking.fromJson(j as Map<String, dynamic>);
+      final List raw = json.decode(res.body) as List;
+      // Map the returned JSON array to a List of Bookings
+      return raw.map<Booking>((e) => Booking.fromJson(e as Map<String, dynamic>)).toList();
     } else {
-      throw Exception('Create booking failed: ${res.statusCode} ${res.body}');
+      throw Exception('Create serial booking failed: ${res.statusCode} ${res.body}');
     }
   }
 
+
+  // POST feedback route 
   static Future<bool> postFeedback({required String os, required String message}) async {
     final uri = Uri.parse('$baseUrl/feedback');
     final token = await getToken();
@@ -73,6 +90,7 @@ class ApiService {
     return res.statusCode == 200 || res.statusCode == 201;
   }
 
+  // POST login information
   static Future<String> login(String email, String password) async {
     final uri = Uri.parse("$baseUrl/auth/login");
     final res = await http.post(uri,
@@ -89,6 +107,7 @@ class ApiService {
     }
   }
 
+  // POST require new password
   static Future<void> requestPasswordReset(String email) async {
     final uri = Uri.parse("$baseUrl/auth/check");
     
@@ -103,6 +122,7 @@ class ApiService {
     }
   }
 
+  // POST new password confirm request
   static Future<void> confirmPasswordReset(String email, String newPassword) async {
     final uri = Uri.parse("$baseUrl/auth/reset");
     final res = await http.post(uri,
@@ -114,6 +134,7 @@ class ApiService {
     }
   }
 
+  // POST register of new user
   static Future<void> register(String email, String password, String code) async {
     final uri = Uri.parse("$baseUrl/auth/register");
     final res = await http.post(uri,

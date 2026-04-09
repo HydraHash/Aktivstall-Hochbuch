@@ -140,7 +140,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 Navigator.pop(c, TimeOfDay(hour: h, minute: m));
               }
             },
-            child: const Text('OK'),
+            child: const Text('Weiter'),
           ),
         ],
       ),
@@ -154,12 +154,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime? pickedDate;
   TimeOfDay? startTOD;
   TimeOfDay? endTOD;
+  String? serialInterval;
+  String? numberIntervals;
+  List<String> numberIntervalsList = <String>['2x', '3x', '4x', '5x'];
 
   final riderCtrl = TextEditingController();
   final horseCtrl = TextEditingController();
   final usageCtrl = TextEditingController();
   final detailsCtrl = TextEditingController();
+  
   bool exclusive = false;
+  bool serialBooking = false;
 
   int currentStep = 0;
   bool isFlowActive = true;
@@ -211,7 +216,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           currentStep--;
         } else {
           startTOD = newStart;
-          currentStep++;
+          currentStep = 2;
         }
         break;
 
@@ -234,7 +239,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         );
 
         if (newEnd == null) {
-          currentStep--;
+          currentStep = 1;
           break;
         }
 
@@ -253,7 +258,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         }
 
         endTOD = newEnd;
-        currentStep++;
+        currentStep = 3;
         break;
 
       // STEP 4: METADATA
@@ -284,6 +289,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         title: const Text('Ich benötige die Halle alleine'),
                         controlAffinity: ListTileControlAffinity.leading,
                       ),
+                      CheckboxListTile(
+                        value: serialBooking,
+                        onChanged: (v) => setStateDialog(() => serialBooking = v ?? false),
+                        title: const Text('Serienbuchung anlegen'),
+                        controlAffinity: ListTileControlAffinity.leading,
+                      ),
                     ],
                   ),
                 ),
@@ -305,11 +316,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
         );
 
         if (result == true) {
-          currentStep++;
-        } else {
-          currentStep--;
-        }
-        break;
+          if (serialBooking) {
+            currentStep = 5;
+          } else {
+            currentStep = 4;
+          }
+        } else {currentStep = 2;}
 
       // STEP 5: CONFIRMATION
       case 4:
@@ -319,6 +331,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
         final fmtDate = DateFormat('EEEE, dd.MM.yyyy', 'de_DE');
         final fmtTime = DateFormat('HH:mm');
+
+        int totalBookings = 1;
+        if (serialBooking && numberIntervals != null){
+          totalBookings = int.parse(numberIntervals!.replaceAll('x', ''));
+        }
 
         final confirmed = await showDialog<bool>(
           context: context,
@@ -342,6 +359,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   if (detailsCtrl.text != "") ...[const SizedBox(height: 6), _bulletRow('Details', detailsCtrl.text)],
                   const SizedBox(height: 6),
                   _bulletRow('Exklusiv', exclusive ? 'Ja' : 'Nein'),
+
+                  if (serialBooking) ...[ //Add serial information to confirmation page
+                    const SizedBox(height: 12),
+                    const Divider(),
+                    const SizedBox(height: 6),
+                    _bulletRow('Interval', serialInterval ?? ''),
+                    const SizedBox(height: 6),
+                    _bulletRow('Anzahl Termine', '$totalBookings'),
+                  ]
                ],
             ),
             actions: [
@@ -358,15 +384,38 @@ class _CalendarScreenState extends State<CalendarScreen> {
         );
 
         if (confirmed == true) {
-            final startUtc = startLocal.toUtc();
-            final endUtc = endLocal.toUtc();
-
             setState(() => _loading = true);
+
+            //Generate Lists for Start and End times
+            List<DateTime> startList = [];
+            List<DateTime> endList = [];
+
+            for (int i = 0; i < totalBookings; i++){
+              DateTime currentStart = startLocal;
+              DateTime currentEnd = endLocal;
+
+              if (serialBooking && i > 0){
+                int daysToAdd = 0;  //Add days based on chosen interval
+                if (serialInterval == 'Täglich') daysToAdd = 1 * i;
+                if (serialInterval == 'Wöchentlich') daysToAdd = 7 * i;
+                if (serialInterval == 'Alle 2 Wochen') daysToAdd = 14 * i;
+                if (serialInterval == 'Monatlich') {
+                  currentStart = DateTime(startLocal.year, startLocal.month + i, startLocal.day, startLocal.hour, startLocal.minute);
+                  currentEnd = DateTime(endLocal.year, endLocal.month + i, endLocal.day, endLocal.hour, endLocal.minute);
+                } else {
+                  currentStart = startLocal.add(Duration(days: daysToAdd));
+                  currentEnd = endLocal.add(Duration(days: daysToAdd));
+                }
+              }
+              startList.add(currentStart.toUtc());
+              endList.add(currentEnd.toUtc());
+            }
+
             try {
-              final created = await ApiService.createBooking(
+              final createdList = await ApiService.createBooking(
                 objectId: 1,
-                startUtc: startUtc,
-                endUtc: endUtc,
+                startUtcs: startList,
+                endUtcs: endList,
                 exclusive: exclusive,
                 details: detailsCtrl.text,
                 nameRider: riderCtrl.text,
@@ -374,10 +423,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 descUsage: usageCtrl.text,
               );
 
-              // update local events map
-              final key = _dateOnly(created.start.toLocal());
+              // update local events map with all created bookings
               setState(() {
-                _events.putIfAbsent(key, () => []).add(created);
+                for (var booking in createdList) {
+                  final key = _dateOnly(booking.start.toLocal());
+                  _events.putIfAbsent(key, () => []).add(booking);
+                }
               });
 
               // refresh authoritative data for week
@@ -391,8 +442,110 @@ class _CalendarScreenState extends State<CalendarScreen> {
               if (mounted) setState(() => _loading = false);
             }
            isFlowActive = false; // Break loop
+        } else if (serialBooking == false){
+           currentStep = 3;
+        } else {currentStep = 5;}
+        break;
+      
+      //Step 6: only when serialBooking button is wanted
+      case 5:
+        const List<String> intervalList = <String>['Täglich', 'Wöchentlich', 'Alle 2 Wochen', 'Monatlich'];
+        const List<String> numberByWeeklyList = <String>['2x', '3x'];
+        const List<String> numberMonthlyList = <String>['2x'];
+
+        // Default to "Alle 7 Tage" if nothing selected yet
+        serialInterval ??= intervalList[1];
+        numberIntervals ??= numberIntervalsList[1];
+
+        final serialResult = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (c) => StatefulBuilder(
+            builder: (ctx, setStateDialog) {
+              return AlertDialog(
+                title: const Text('Serien-Buchung'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Intervall wählen:'),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: serialInterval,
+                          isExpanded: true,
+                          items: intervalList.map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            if (newValue != null) {
+                              setStateDialog(() => serialInterval = newValue);
+                            }
+                            if (newValue == 'Alle 2 Wochen'){
+                              setStateDialog(() => numberIntervalsList = numberByWeeklyList);
+                            } else if (newValue == 'Monatlich'){
+                              setStateDialog(() => numberIntervalsList = numberMonthlyList);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: numberIntervals,
+                          isExpanded: true,
+                          items: numberIntervalsList.map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            if (newValue != null) {
+                              setStateDialog(() => numberIntervals = newValue);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                  //pickedDate is current date,
+
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(c, false), // Return false for Back
+                    child: const Text('Zurück'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(c, true), // Return true for Next
+                    child: const Text('Weiter'),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+
+        if (serialResult == true) {
+          currentStep = 4;
         } else {
-           currentStep--; // Go back to Metadata
+          currentStep = 3;
         }
         break;
         
