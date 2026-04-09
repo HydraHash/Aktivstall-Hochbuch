@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Wir benötigen Zugriff auf Ihre Fotos, damit Sie einen Screenshot an Ihr Feedback anhängen können.</string>
 </dict>
 </plist>
