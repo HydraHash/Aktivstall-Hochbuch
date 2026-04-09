@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../models/booking.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -76,18 +77,31 @@ class ApiService {
   }
 
 
-  // POST feedback route 
-  static Future<bool> postFeedback({required String os, required String message}) async {
-    final uri = Uri.parse('$baseUrl/feedback');
+  // POST feedback route with image support
+  static Future<bool> postFeedback({required String os, required String message, File? imageFile}) async {
+    final uri = Uri.parse('$baseUrl/feedback/image');
     final token = await getToken();
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-    };
-    if (token != null && token.isNotEmpty) headers['Authorization'] = token;
 
-    final body = jsonEncode({'os': os, 'message': message});
-    final res = await http.post(uri, headers: headers, body: body);
-    return res.statusCode == 200 || res.statusCode == 201;
+    // Create multipart request
+    var request = http.MultipartRequest('POST', uri);
+    if (token != null && token.isNotEmpty){
+      request.headers['Authorization'] = token;
+    }
+
+    // Add text fields and file if exists
+    request.fields['os'] = os;
+    request.fields['message'] = message;
+
+    if (imageFile != null){
+      var fileStream = await http.MultipartFile.fromPath('image', imageFile.path);
+      request.files.add(fileStream);
+    }
+
+    // try sending the request
+    try {
+      var response = await request.send();
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) { return false;} 
   }
 
   // POST login information
