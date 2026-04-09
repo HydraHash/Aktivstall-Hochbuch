@@ -2,4 +2,4 @@
 
 Buchungsanwendung für den Aktivstall Hochbuch
 
-© 2025 Herrmann Agrar eGbR
+© 2026 Herrmann Agrar eGbR
