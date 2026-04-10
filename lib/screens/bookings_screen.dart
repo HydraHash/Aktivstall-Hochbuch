@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/booking.dart';
 import '../services/api_service.dart';
+import '../widgets/app_drawer.dart';
 import 'login_screen.dart';
 
 class MyBookingsScreen extends StatefulWidget {
@@ -102,6 +103,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     final aussenplatzBookings = _bookings.where((b) => b.objectId == 2).toList();
 
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(title: const Text('Meine Buchungen')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())

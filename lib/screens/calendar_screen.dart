@@ -3,6 +3,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../models/booking.dart';
+import '../widgets/app_drawer.dart';
 import 'login_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -588,6 +589,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const AppDrawer(),
       key: _scaffoldKey,
       appBar: AppBar(
         title: Text('Reithalle Innen 20x40m'),

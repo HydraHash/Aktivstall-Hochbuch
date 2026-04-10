@@ -6,6 +6,7 @@ import 'help_screen.dart';
 import '../services/api_service.dart';
 import 'login_screen.dart';
 import '../widgets/brand_header.dart';
+import '../widgets/app_drawer.dart';
 import '../config/brand.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -15,32 +16,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  void _logout() async {
-    await ApiService.logout();
-    if (context.mounted) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: Drawer(
-        child: SafeArea(
-          child: ListView(
-            children: [
-              DrawerHeader(child: Center(child: Image.asset('assets/icon.png'))),
-              ListTile(leading: const Icon(Icons.dashboard), title: const Text("Dashboard"), onTap: () => Navigator.pop(context)),
-              ListTile(leading: const Icon(Icons.home), title: const Text("Reithalle Belegungsplan"), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CalendarScreen()))),
-              ListTile(leading: const Icon(Icons.sunny), title: const Text("Reitplatz Belegungsplan"), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OutsideCalendarScreen()))),
-              ListTile(leading: const Icon(Icons.list_alt), title: const Text("Meine Buchungen"), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyBookingsScreen()))),
-              const Divider(),
-              ListTile(leading: const Icon(Icons.help), title: const Text("Hilfe und Feedback"), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpScreen()))),
-              ListTile(leading: const Icon(Icons.logout), title: const Text("Logout"), onTap: _logout),
-            ],
-          ),
-        ),
-      ),
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Dashboard'),
         backgroundColor: Brand.primary,

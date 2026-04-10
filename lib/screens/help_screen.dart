@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart'; // Import this
+import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
 import '../config/brand.dart';
+import '../widgets/app_drawer.dart';
 
 class HelpScreen extends StatefulWidget {
   const HelpScreen({super.key});
@@ -60,6 +61,7 @@ class _HelpScreenState extends State<HelpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(title: const Text('Hilfe & Feedback')),
       body: SingleChildScrollView( // Changed to SingleChildScrollView to prevent keyboard overflow
         padding: const EdgeInsets.all(16.0),
