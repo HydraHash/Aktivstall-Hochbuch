@@ -98,47 +98,88 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final reithalleBookings = _bookings.where((b) => b.objectId == 1).toList();
+    final aussenplatzBookings = _bookings.where((b) => b.objectId == 2).toList();
+
     return Scaffold(
       appBar: AppBar(title: const Text('Meine Buchungen')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _bookings.isEmpty
-              ? const Center(child: Text('Keine bevorstehenden Buchungen.'))
-              : RefreshIndicator(
-                  onRefresh: _loadMyBookings,
-                  child: ListView.builder(
-                    itemCount: _bookings.length,
-                    itemBuilder: (context, i) {
-                      final b = _bookings[i];
-                      final fmt = DateFormat('EEE dd.MM HH:mm', 'de_DE');
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        child: ListTile(
-                          leading: b.exclusive
-                              ? const Icon(Icons.lock, color: Colors.redAccent)
-                              : const Icon(Icons.event),
-                          title: Text(
-                            '${fmt.format(b.start)} — ${DateFormat('HH:mm').format(b.end)}',
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if ((b.nameRider ?? '').isNotEmpty) Text('Reiter: ${b.nameRider}'),
-                              if ((b.nameHorse ?? '').isNotEmpty) Text('Pferd: ${b.nameHorse}'),
-                              if ((b.descUsage ?? '').isNotEmpty) Text('Verwendung: ${b.descUsage}'),
-                              if ((b.details ?? '').isNotEmpty) Text('Details: ${b.details}'),
-                            ],
-                          ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.redAccent),
-                            onPressed: () => _confirmDelete(b),
-                          ),
-                          isThreeLine: true,
-                        ),
-                      );
-                    },
+          : RefreshIndicator(
+              onRefresh: _loadMyBookings,
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                children: [
+                  // Section Reithalle ---
+                  const Padding(
+                    padding: EdgeInsets.only(left: 16, top: 8, bottom: 8),
+                    child: Text('Reithalle Innen', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                   ),
-                ),
+                  ..._buildBookingSection(reithalleBookings, 'Keine Buchungen für die Reithalle.'),
+
+                  // Visual Separator
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Divider(thickness: 1.5, indent: 16, endIndent: 16),
+                  ),
+
+                  // Section Reitplatz ---
+                  const Padding(
+                    padding: EdgeInsets.only(left: 16, bottom: 8),
+                    child: Text('Reitplatz Außen', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                  ),
+                  ..._buildBookingSection(aussenplatzBookings, 'Keine Buchungen für den Reitplatz.'),
+                  
+                  // Space at the bottom
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+    );
+  }
+
+  // Helper 1: Show empty message or cards
+  List<Widget> _buildBookingSection(List<Booking> sectionBookings, String emptyMessage) {
+    if (sectionBookings.isEmpty) {
+      return [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Text(
+            emptyMessage, 
+            style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+          ),
+        )
+      ];
+    }
+    // If not empty, map the bookings to cards
+    return sectionBookings.map((b) => _buildBookingCard(b)).toList();
+  }
+
+  // Helper 2: Exctracted Card build method
+  Widget _buildBookingCard(Booking b) {
+    final fmt = DateFormat('EEE dd.MM HH:mm', 'de_DE');
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: ListTile(
+        leading: b.objectId == 1
+            ? const Icon(Icons.home, color: Colors.blueGrey)
+            : const Icon(Icons.sunny, color: Colors.blueGrey),
+        title: Text('${fmt.format(b.start)} — ${DateFormat('HH:mm').format(b.end)}'),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if ((b.nameRider ?? '').isNotEmpty) Text('Reiter: ${b.nameRider}'),
+            if ((b.nameHorse ?? '').isNotEmpty) Text('Pferd: ${b.nameHorse}'),
+            if ((b.descUsage ?? '').isNotEmpty) Text('Verwendung: ${b.descUsage}'),
+            if ((b.details ?? '').isNotEmpty) Text('Details: ${b.details}'),
+          ],
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.delete, color: Colors.redAccent),
+          onPressed: () => _confirmDelete(b),
+        ),
+        isThreeLine: true,
+      ),
     );
   }
 }

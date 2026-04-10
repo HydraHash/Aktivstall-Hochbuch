@@ -1,6 +1,7 @@
 import 'package:aktivstall_app/screens/bookings_screen.dart';
 import 'package:flutter/material.dart';
 import 'calendar_screen.dart';
+import 'outside_calendar_screen.dart';
 import 'help_screen.dart';
 import '../services/api_service.dart';
 import 'login_screen.dart';
@@ -29,18 +30,19 @@ class _HomeScreenState extends State<HomeScreen> {
           child: ListView(
             children: [
               DrawerHeader(child: Center(child: Image.asset('assets/icon.png'))),
-              ListTile(leading: const Icon(Icons.home), title: const Text("Home"), onTap: () => Navigator.pop(context)),
-              ListTile(leading: const Icon(Icons.calendar_today), title: const Text("Belegungsplan"), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CalendarScreen()))),
+              ListTile(leading: const Icon(Icons.dashboard), title: const Text("Dashboard"), onTap: () => Navigator.pop(context)),
+              ListTile(leading: const Icon(Icons.home), title: const Text("Reithalle Belegungsplan"), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CalendarScreen()))),
+              ListTile(leading: const Icon(Icons.sunny), title: const Text("Reitplatz Belegungsplan"), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OutsideCalendarScreen()))),
               ListTile(leading: const Icon(Icons.list_alt), title: const Text("Meine Buchungen"), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyBookingsScreen()))),
-              ListTile(leading: const Icon(Icons.help), title: const Text("Hilfe und Feedback"), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpScreen()))),
               const Divider(),
+              ListTile(leading: const Icon(Icons.help), title: const Text("Hilfe und Feedback"), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpScreen()))),
               ListTile(leading: const Icon(Icons.logout), title: const Text("Logout"), onTap: _logout),
             ],
           ),
         ),
       ),
       appBar: AppBar(
-        title: const Text('Home'),
+        title: const Text('Dashboard'),
         backgroundColor: Brand.primary,
       ),
       body: SingleChildScrollView(

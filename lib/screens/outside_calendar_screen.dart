@@ -5,13 +5,13 @@ import '../services/api_service.dart';
 import '../models/booking.dart';
 import 'login_screen.dart';
 
-class CalendarScreen extends StatefulWidget {
-  const CalendarScreen({super.key});
+class OutsideCalendarScreen extends StatefulWidget {
+  const OutsideCalendarScreen({super.key});
   @override
-  State<CalendarScreen> createState() => _CalendarScreenState();
+  State<OutsideCalendarScreen> createState() => _OutsideCalendarScreenState();
 }
 
-class _CalendarScreenState extends State<CalendarScreen> {
+class _OutsideCalendarScreenState extends State<OutsideCalendarScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   DateTime _focusedDay = DateTime.now();
   CalendarFormat _format = CalendarFormat.twoWeeks; // show 2 weeks
@@ -44,7 +44,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final year = map['year']!;
     var week = map['week']!;
     try {
-      final currentWeek = await ApiService.getBookingsForWeek(year: year, week: week, objectId: 1);
+      final currentWeek = await ApiService.getBookingsForWeek(year: year, week: week, objectId: 2);
       final List<Booking> allBookings = [];
       allBookings.addAll(currentWeek);
       final Map<DateTime, List<Booking>> ev = {};
@@ -286,7 +286,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       CheckboxListTile(
                         value: exclusive,
                         onChanged: (v) => setStateDialog(() => exclusive = v ?? false),
-                        title: const Text('Ich benötige die Halle alleine'),
+                        title: const Text('Ich benötige den Reitplatz alleine'),
                         controlAffinity: ListTileControlAffinity.leading,
                       ),
                       CheckboxListTile(
@@ -413,7 +413,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
             try {
               final createdList = await ApiService.createBooking(
-                objectId: 1,
+                objectId: 2,
                 startUtcs: startList,
                 endUtcs: endList,
                 exclusive: exclusive,
@@ -590,7 +590,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
-        title: Text('Reithalle Innen 20x40m'),
+        title: Text('Reitplatz Außen 20x60m'),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
