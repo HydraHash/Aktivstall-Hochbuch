@@ -76,7 +76,6 @@ class ApiService {
     }
   }
 
-
   // POST feedback route with image support
   static Future<bool> postFeedback({required String os, required String message, File? imageFile}) async {
     final uri = Uri.parse('$baseUrl/feedback/image');
@@ -178,6 +177,43 @@ class ApiService {
     }
   }
 
+  // PUT Update existing booking
+  static Future<bool> updateBooking({
+    required int bookingId,
+    required int objectId,
+    required DateTime startUtc,
+    required DateTime endUtc,
+    bool exclusive = false,
+    String? details,
+    String? nameRider,
+    String? nameHorse,
+    String? descUsage,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('No auth token');
+
+    final payload = {
+      'object_id': objectId,
+      'start_time': startUtc.toIso8601String(),
+      'end_time': endUtc.toIso8601String(),
+      'exclusive': exclusive ? 1 : 0,
+      'details': details ?? '',
+      'name_rider': nameRider ?? '',
+      'name_horse': nameHorse ?? '',
+      'desc_usage': descUsage ?? '',
+    };
+
+    final uri = Uri.parse('$baseUrl/bookings/update/$bookingId');
+    final res = await http.put(uri, headers: {'Content-Type': 'application/json', 'Authorization': token}, body: json.encode(payload));
+
+    if (res.statusCode == 200) {
+      return true;
+    } else {
+      final j = json.decode(res.body);
+      throw Exception(j['error'] ?? 'Update fehlgeschlagen - Versuchen Sie es später erneut.');
+    }
+  }
+
   // DELETE a booking by ID
   static Future<bool> deleteBooking(int id) async {
     final token = await getToken();
@@ -186,8 +222,8 @@ class ApiService {
     final res = await http.delete(uri, headers: {'Authorization': token});
     return res.statusCode == 200 || res.statusCode == 204;
   }
-
-
+  
+  // LOGOUT from app
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove("token");

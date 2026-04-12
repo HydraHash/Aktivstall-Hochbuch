@@ -1,8 +1,10 @@
+import 'package:aktivstall_app/utils/picker_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/booking.dart';
 import '../services/api_service.dart';
 import '../widgets/app_drawer.dart';
+import '../utils/picker_utils.dart';
 import 'login_screen.dart';
 
 class MyBookingsScreen extends StatefulWidget {
@@ -97,6 +99,154 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     }
   }
 
+  void _showEditSheet(Booking booking) {
+    // Initialize local state with current booking data
+    DateTime selectedDate = booking.start.toLocal();
+    TimeOfDay startTime = TimeOfDay.fromDateTime(booking.start.toLocal());
+    TimeOfDay endTime = TimeOfDay.fromDateTime(booking.end.toLocal());
+    bool exclusive = booking.exclusive;
+    
+    final riderCtrl = TextEditingController(text: booking.nameRider);
+    final horseCtrl = TextEditingController(text: booking.nameHorse);
+    final usageCtrl = TextEditingController(text: booking.descUsage);
+    final detailsCtrl = TextEditingController(text: booking.details);
+
+    bool isSaving = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // Crucial for forms so the keyboard pushes it up
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (BuildContext context, StateSetter setModalState) {
+          final fmtDate = DateFormat('EEEE, dd.MM.yyyy', 'de_DE');
+          
+          return Padding(
+            // Adds padding for the keyboard
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 16, right: 16, top: 16),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Buchung bearbeiten', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  
+                  // --- DATE AND TIME CONTROLS ---
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.calendar_today),
+                    title: const Text('Datum'),
+                    subtitle: Text(fmtDate.format(selectedDate)),
+                    onTap: () async {
+                      final newDate = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (newDate != null) setModalState(() => selectedDate = newDate);
+                    },
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.access_time),
+                          title: const Text('Start'),
+                          subtitle: Text(startTime.format(context)),
+                          onTap: () async {
+                            final newTime = await showNumericTimePicker(context: context, title: 'Startzeit anpassen', initial: startTime);
+                            if (newTime != null) setModalState(() => startTime = newTime);
+                          },
+                        ),
+                      ),
+                      Expanded(
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.access_time_filled),
+                          title: const Text('Ende'),
+                          subtitle: Text(endTime.format(context)),
+                          onTap: () async {
+                            final newTime = await showNumericTimePicker(context: context, title: 'Endzeit anpassen', initial: endTime);
+                            if (newTime != null) setModalState(() => endTime = newTime);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+
+                  // --- TEXT FIELDS ---
+                  TextField(controller: riderCtrl, decoration: const InputDecoration(labelText: 'Name Reiter')),
+                  const SizedBox(height: 8),
+                  TextField(controller: horseCtrl, decoration: const InputDecoration(labelText: 'Name Pferd')),
+                  const SizedBox(height: 8),
+                  TextField(controller: usageCtrl, decoration: const InputDecoration(labelText: 'Zweck / Nutzung')),
+                  const SizedBox(height: 8),
+                  
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: exclusive,
+                    onChanged: (v) => setModalState(() => exclusive = v ?? false),
+                    title: const Text('Halle exklusiv benötigt'),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+
+                  const SizedBox(height: 16),
+                  
+                  // --- SAVE BUTTON ---
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: isSaving ? null : () async {
+                        setModalState(() => isSaving = true);
+                        
+                        // Combine Date and TimeOfDay
+                        final newStartLocal = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, startTime.hour, startTime.minute);
+                        final newEndLocal = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, endTime.hour, endTime.minute);
+
+                        try {
+                          await ApiService.updateBooking(
+                            bookingId: booking.id,
+                            objectId: booking.objectId, // Keep the same object
+                            startUtc: newStartLocal.toUtc(),
+                            endUtc: newEndLocal.toUtc(),
+                            exclusive: exclusive,
+                            nameRider: riderCtrl.text,
+                            nameHorse: horseCtrl.text,
+                            descUsage: usageCtrl.text,
+                            details: detailsCtrl.text,
+                          );
+
+                          if (context.mounted) {
+                            Navigator.pop(context); // Close the sheet
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Änderungen gespeichert!')));
+                            _loadMyBookings(); // Refresh the list
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+                          }
+                        } finally {
+                          setModalState(() => isSaving = false);
+                        }
+                      },
+                      child: isSaving 
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text('Speichern'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
   @override
   Widget build(BuildContext context) {
     final reithalleBookings = _bookings.where((b) => b.objectId == 1).toList();
@@ -176,9 +326,12 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
             if ((b.details ?? '').isNotEmpty) Text('Details: ${b.details}'),
           ],
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete, color: Colors.redAccent),
-          onPressed: () => _confirmDelete(b),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(icon: const Icon(Icons.edit, color: Colors.blueGrey), onPressed: () => _showEditSheet(b)),
+            IconButton(icon: const Icon(Icons.delete, color: Colors.redAccent), onPressed: () => _confirmDelete(b)),
+          ],
         ),
         isThreeLine: true,
       ),
