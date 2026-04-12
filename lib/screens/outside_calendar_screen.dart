@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../models/booking.dart';
 import '../widgets/app_drawer.dart';
+import '../utils/picker_utils.dart';
 import 'login_screen.dart';
 
 class OutsideCalendarScreen extends StatefulWidget {
@@ -82,74 +83,6 @@ class _OutsideCalendarScreenState extends State<OutsideCalendarScreen> {
 
   List<Booking> _getEventsForDay(DateTime day) => _events[_dateOnly(day)] ?? [];
 
-
-  // Numeric time picker dialog: returns TimeOfDay or null
-  Future<TimeOfDay?> _showNumericTimePicker({
-    required BuildContext context,
-    required String title,
-    required TimeOfDay initial,
-  }) async {
-    final hourCtrl = TextEditingController(text: initial.hour.toString().padLeft(2, '0'));
-    final minCtrl = TextEditingController(text: initial.minute.toString().padLeft(2, '0'));
-    final formKey = GlobalKey<FormState>();
-
-    final result = await showDialog<TimeOfDay>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: Text(title),
-        content: Form(
-          key: formKey,
-          child: Row(
-            children: [
-              Flexible(
-                child: TextFormField(
-                  controller: hourCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Stunden'),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Notwendig';
-                    final i = int.tryParse(v);
-                    if (i == null || i < 0 || i > 23) return 'Ungültig';
-                    return null;
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Flexible(
-                child: TextFormField(
-                  controller: minCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Minuten'),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Notwendig';
-                    final i = int.tryParse(v);
-                    if (i == null || i < 0 || i > 59) return 'Ungültig';
-                    return null;
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Zurück')),
-          ElevatedButton(
-            onPressed: () {
-              if (formKey.currentState?.validate() ?? false) {
-                final h = int.parse(hourCtrl.text);
-                final m = int.parse(minCtrl.text);
-                Navigator.pop(c, TimeOfDay(hour: h, minute: m));
-              }
-            },
-            child: const Text('Weiter'),
-          ),
-        ],
-      ),
-    );
-
-    return result;
-  }
-
   // Main flow to create booking using numeric time inputs and auto-end = +1h
   Future<void> _createBookingFlow() async {
   DateTime? pickedDate;
@@ -207,7 +140,7 @@ class _OutsideCalendarScreenState extends State<OutsideCalendarScreen> {
         // If we have a previous selection, use it, otherwise default
         final initial = startTOD ?? TimeOfDay(hour: now.hour, minute: nextQuarter);
 
-        final newStart = await _showNumericTimePicker(
+        final newStart = await showNumericTimePicker(
           context: context,
           title: 'Startzeit wählen:',
           initial: initial,
@@ -233,7 +166,7 @@ class _OutsideCalendarScreenState extends State<OutsideCalendarScreen> {
         final defaultEnd = startLocal.add(const Duration(hours: 1));
         final initialEnd = endTOD ?? TimeOfDay(hour: defaultEnd.hour, minute: defaultEnd.minute);
 
-        final newEnd = await _showNumericTimePicker(
+        final newEnd = await showNumericTimePicker(
           context: context,
           title: 'Endzeit wählen:',
           initial: initialEnd,
