@@ -110,7 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final b = _nextUserBooking!;
     final fmtDate = DateFormat('EEEE, dd.MM.', 'de_DE');
     final fmtTime = DateFormat('HH:mm');
-    final objectName = b.objectId == 1 ? 'Reithalle' : 'Außenplatz';
+    final objectName = b.objectId == 1 ? 'Reithalle' : 'Reitplatz';
     final iconColor = b.objectId == 1 ? Colors.blue : Colors.green;
 
     return InkWell(
@@ -235,7 +235,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
                       child: Text(
-                        'Willkommen im Aktivstall Hochbuch!',
+                        'Willkommen im \n Aktivstall Hochbuch!',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
