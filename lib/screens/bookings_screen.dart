@@ -1,4 +1,3 @@
-import 'package:aktivstall_app/utils/picker_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/booking.dart';
@@ -82,18 +81,24 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
   Future<void> _deleteBooking(Booking booking) async {
     setState(() => _loading = true);
     try {
-      final success = await ApiService.deleteBooking(booking.id);
-      if (success) {
-        setState(() => _bookings.removeWhere((b) => b.id == booking.id));
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Buchung gelöscht.')));
-      } else {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Löschen fehlgeschlagen.')));
+      await ApiService.deleteBooking(booking.id);
+      setState(() => _bookings.removeWhere((b) => b.id == booking.id));
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Buchung erfolgreich gelöscht.'))
+        );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Fehler beim Löschen: $e')));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Colors.red.shade800,
+            behavior: SnackBarBehavior.floating,
+          )
+        );
+      }
     } finally {
       setState(() => _loading = false);
     }

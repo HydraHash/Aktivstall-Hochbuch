@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../models/booking.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+
 class ApiService {
   static const String baseUrl = 'https://app.aktivstall-hochbuch.de'; // use https in production
 
@@ -215,12 +216,25 @@ class ApiService {
   }
 
   // DELETE a booking by ID
-  static Future<bool> deleteBooking(int id) async {
+  static Future<void> deleteBooking(int id) async {
     final token = await getToken();
     if (token == null) throw Exception('No auth token');
+    
     final uri = Uri.parse('$baseUrl/bookings/delete/$id');
     final res = await http.delete(uri, headers: {'Authorization': token});
-    return res.statusCode == 200 || res.statusCode == 204;
+    
+    if (res.statusCode == 200 || res.statusCode == 204) {
+      return; // Success, do nothing
+    } else {
+      try {
+        final errorData = json.decode(res.body);
+        if (errorData['error'] != null) {
+          throw Exception(errorData['error']); // Pass the clean backend message
+        }
+      } catch (_) {}
+      
+      throw Exception('Buchung konnte nicht gelöscht werden.');
+    }
   }
   
   // LOGOUT from app
